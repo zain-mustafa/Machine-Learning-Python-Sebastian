@@ -3,7 +3,13 @@
 # ## Perceptron through Scikit
 import Chapter2
 from sklearn import datasets
+from sklearn.model_selection import train_test_split
 import numpy as np
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import export_graphviz
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 iris = datasets.load_iris()
 X = iris.data[:, [2, 3]] # Getting the 3 and 4th column of the dataset
@@ -12,13 +18,8 @@ y = iris.target
 np.unique(y) #Unique values from the target to see integer values for class names
 
 
-# #### Creating train and test data
-
-
-from sklearn.model_selection import train_test_split
+# Creating train and test data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
-
-#Randomly Splitting the data in a 30% test data and 70% training data split.
 
 
 # #### Feature Scaling
@@ -127,14 +128,112 @@ plt.ylabel('petal length [standardized]')
 plt.legend(loc='upper left')
 plt.show()
 
-lr.predict_proba(X_test_std[0,:])
+# lr.predict_proba(X_test_std[0,:])
 
 #####################
 #REGULARIZATION
 #####################
 
+weights, params = [], []
 
+for c in np.arange(-5, 5, dtype=float):
+    lr = LogisticRegression(C=10**c, random_state=0)
+    lr.fit(X_train_std, y_train)
+    weights.append(lr.coef_[1])
+    params.append(10**c)
 
+weights = np.array(weights)
+plt.plot(params, weights[:, 0], label='petal length')
+plt.plot(params, weights[:, 1], linestyle='--', label='petal width')
+plt.ylabel('Weight Coefficient')
+plt.xlabel('C')
+plt.legend(loc='upper left')
+plt.xscale('log')
+plt.show()
 
+#####################
+#SUPPORT VECTOR MACHINES
+#####################
 
+svm = SVC(kernel='linear', C=1.0, random_state=0)
+svm.fit(X_train_std, y_train)
+plot_decision_regions(X_combined_std, y_combined, classifier=svm, test_idx=range(105,150))
+plt.ylabel('Petal Length [Standardized]')
+plt.xlabel('Petal Width [Standardized]')
+plt.legend(loc='upper left')
+plt.show()
 
+#####################
+#NON-LINEAR PROBLEMS USING SUPPORT VECTOR MACHINES
+#####################
+
+np.random.seed(0)
+X_xor = np.random.randn(200, 2)
+y_xor = np.logical_xor(X_xor[:, 0] > 0, X_xor[:, 1] > 0)
+y_xor = np.where(y_xor, 1, -1)
+
+plt.scatter(X_xor[y_xor == 1, 0], X_xor[y_xor == 1, 1], c = 'b', marker = 'x', label='1')
+plt.scatter(X_xor[y_xor == -1, 0], X_xor[y_xor == -1, 1], c = 'r', marker = 's', label='-1')
+
+plt.ylim(-3.0)
+plt.legend()
+plt.show()
+
+svm = SVC(kernel='rbf', C=10.0, random_state=0, gamma=0.10)
+svm.fit(X_xor, y_xor)
+plot_decision_regions(X_xor, y_xor, classifier=svm)
+plt.ylabel('Petal Length [Standardized]')
+plt.xlabel('Petal Width [Standardized]')
+plt.legend(loc='upper left')
+plt.show()
+
+#Applying it to the IRIS dataset
+
+svm = SVC(kernel='rbf', random_state=0, gamma=100.0, C=1.0)
+svm.fit(X_train_std, y_train)
+plot_decision_regions(X_combined_std, y_combined, classifier=svm, test_idx=range(105,150))
+plt.ylabel('Petal Length [Standardized]')
+plt.xlabel('Petal Width [Standardized]')
+plt.legend(loc='upper left')
+plt.show()
+
+#####################
+# DECISION TREES
+#####################
+
+tree = DecisionTreeClassifier(criterion='entropy', max_depth=3, random_state=0)
+tree.fit(X_train, y_train)
+X_combined = np.vstack((X_train, X_test))
+y_combined = np.hstack((y_train, y_test))
+plot_decision_regions(X_combined, y_combined, classifier=tree, test_idx=range(105,150))
+plt.xlabel('petal length (cm)')
+plt.ylabel('petal width (cm)')
+plt.legend(loc='upper left')
+plt.show()
+
+# Visualize the Tree using GraphViz
+export_graphviz(tree, out_file='tree.dot', feature_names=['petal length', 'petal width'])
+
+#####################
+# RANDOM FOREST CLASSIFIER
+#####################
+
+forest = RandomForestClassifier(criterion='entropy', n_estimators=10, random_state=1, n_jobs=2)
+forest.fit(X_train, y_train)
+plot_decision_regions(X_combined, y_combined, classifier=forest, test_idx=range(105,150))
+plt.xlabel('petal length (cm)')
+plt.ylabel('petal width (cm)')
+plt.legend(loc='upper left')
+plt.show()
+
+#####################
+# KNN (K-NEAREST NEIGHBORS)
+#####################
+
+knn = KNeighborsClassifier(n_neighbors=5, p=2, metric='minkowski')
+knn.fit(X_train_std, y_train)
+plot_decision_regions(X_combined_std, y_combined, classifier=knn, test_idx=range(105,150))
+plt.xlabel('petal length [Standardized]')
+plt.ylabel('petal width [Standardized]')
+plt.legend(loc='upper left')
+plt.show()
